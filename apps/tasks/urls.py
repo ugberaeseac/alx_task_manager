@@ -11,4 +11,5 @@ urlpatterns = [
     path('tasks/<uuid:pk>/delete/', views.TaskDeleteView.as_view(), name='task_delete'),
     path('projects/', views.ProjectListView.as_view(), name='project_list'),
     path('projects/<uuid:pk>/', views.ProjectDetailView.as_view(), name='project_detail'),
+    path('tasks/quick-add/', views.parse_create_task, name='parse_create_task'),
 ]

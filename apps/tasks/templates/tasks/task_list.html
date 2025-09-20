@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <div class="container">
+        <h2>My Tasks</h2>
+
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="get" class="form-inline">
+                    <div class="form-group mr-2">
+                        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ search_query }}">
+                    </div>
+                    <div class="form-group mr-2">
+                        <select name="status" class="form-control">
+                            <option value="">All Statuses</option>
+                            {% for choice_value, choice_label in Task.STATUS_CHOICES %}
+                                <option value="{{ choice_value }}" {% if choice_value == current_status %}selected{% endif %}>{{ choice_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mr-2">
+                        <select name="priority" class="form-control">
+                            <option value="">All Priorities</option>
+                            {% for choice_value, choice_label in Task.PRIORITY_CHOICES %}
+                                <option value="{{ choice_value }}" {% if choice_value == current_priority %}selected{% endif %}>{{ choice_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Filter & Search</button>
+                    <a href="{% url 'tasks:task_list' %}" class="btn btn-secondary ml-2">Clear Filters</a>
+                </form>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <h4>Quick Add Task</h4>
+                <form method="post" action="{% url 'tasks:parse_create_task' %}" class="form-inline">
+                    {% csrf_token %}
+                    <div class="form-group mr-2">
+                        <input type="text" name="text" class="form-control" placeholder="e.g., 'Buy groceries tomorrow 10am high priority'" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">Add Task</button>
+                </form>
+            </div>
+        </div>
+
+        {% if tasks %}
+            <ul class="list-group">
+                {% for task in tasks %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                            {% if task.due_date %}
+                                <small class="text-muted ml-2">Due: {{ task.due_date|date:"M d, Y H:i" }}</small>
+                            {% endif %}
+                        </div>
+                        <span class="badge badge-info badge-pill">{{ task.get_status_display }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            {% if is_paginated %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for i in page_obj.paginator.page_range %}
+                            <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                                <a class="page-link" href="?page={{ i }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">{{ i }}</a>
+                            </li>
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <p>No tasks found.</p>
+        {% endif %}
+    </div>
+{% endblock %}

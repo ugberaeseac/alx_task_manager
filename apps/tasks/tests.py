@@ -2,6 +2,8 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
+from django.urls import reverse
 from .models import Project, Task
 from .forms import TaskForm
 
@@ -69,3 +71,53 @@ class TaskFormTest(TestCase):
         })
         self.assertFalse(form.is_valid())
         self.assertIn('title', form.errors)
+
+
+class ParseCreateTaskTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='password123')
+        self.client.login(username='testuser', password='password123')
+        self.project = Project.objects.create(owner=self.user, title='Test Project')
+
+    @patch('apps.tasks.ai_parser.parse_task_text')
+    def test_parse_create_task_valid_data(self, mock_parse_task_text):
+        mock_parse_task_text.return_value = {
+            'title': 'Parsed Task',
+            'description': 'Parsed description',
+            'due_date': (timezone.now() + timedelta(days=1)).isoformat(),
+            'priority': 'high',
+            'project': self.project.id,
+        }
+        response = self.client.post(reverse('tasks:parse_create_task'), {'text': 'Buy groceries tomorrow high priority'})
+        self.assertEqual(response.status_code, 302)  # Redirects to task list
+        self.assertEqual(Task.objects.count(), 1)
+        task = Task.objects.first()
+        self.assertEqual(task.title, 'Parsed Task')
+        self.assertEqual(task.owner, self.user)
+        messages = list(response.wsgi_request._messages)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), "Task added successfully!")
+
+    @patch('apps.tasks.ai_parser.parse_task_text')
+    def test_parse_create_task_invalid_data(self, mock_parse_task_text):
+        mock_parse_task_text.return_value = {
+            'title': '',  # Invalid title
+            'description': 'Parsed description',
+            'due_date': (timezone.now() + timedelta(days=1)).isoformat(),
+            'priority': 'high',
+            'project': self.project.id,
+        }
+        response = self.client.post(reverse('tasks:parse_create_task'), {'text': 'Invalid task data'})
+        self.assertEqual(response.status_code, 302)  # Still redirects
+        self.assertEqual(Task.objects.count(), 0)  # No task created
+        messages = list(response.wsgi_request._messages)
+        self.assertGreater(len(messages), 0)
+        self.assertIn("title: This field cannot be blank.", [str(m) for m in messages])
+
+    def test_parse_create_task_empty_text_input(self):
+        response = self.client.post(reverse('tasks:parse_create_task'), {'text': ''})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Task.objects.count(), 0)
+        messages = list(response.wsgi_request._messages)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), "Task text cannot be empty.")
