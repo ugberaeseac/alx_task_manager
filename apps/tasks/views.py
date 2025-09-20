@@ -7,7 +7,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 
 from .models import Task, Project
-from ..forms import TaskForm, ProjectForm
+from .forms import TaskForm, ProjectForm
 from .ai_parser import parse_task_text
 
 
