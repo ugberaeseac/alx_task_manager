@@ -1,13 +1,14 @@
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import FormView
 from django.urls import reverse_lazy
 from django.contrib import messages
+from .forms import CustomUserCreationForm
 
 
 class RegisterView(FormView):
     template_name = 'registration/register.html'
-    form_class = UserCreationForm
+    form_class = CustomUserCreationForm
     success_url = reverse_lazy('login')
 
     def form_valid(self, form):
