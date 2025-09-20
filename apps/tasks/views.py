@@ -86,3 +86,71 @@ class TaskDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return super().get_queryset().filter(owner=self.request.user)
+
+
+class ProjectListView(LoginRequiredMixin, ListView):
+    model = Project
+    template_name = 'tasks/project_list.html'
+    context_object_name = 'projects'
+    paginate_by = 10  # Projects per page
+
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.request.user).order_by('title')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # For each project, get its tasks and apply filters/search
+        for project in context['projects']:
+            tasks_queryset = project.task_set.filter(owner=self.request.user)
+
+            status = self.request.GET.get('status')
+            priority = self.request.GET.get('priority')
+            search_query = self.request.GET.get('q')
+
+            if status:
+                tasks_queryset = tasks_queryset.filter(status=status)
+            if priority:
+                tasks_queryset = tasks_queryset.filter(priority=priority)
+            if search_query:
+                tasks_queryset = tasks_queryset.filter(
+                    Q(title__icontains=search_query) | Q(description__icontains=search_query)
+                )
+            project.tasks = tasks_queryset.order_by('-created_at')
+
+        context['current_status'] = self.request.GET.get('status', '')
+        context['current_priority'] = self.request.GET.get('priority', '')
+        context['search_query'] = self.request.GET.get('q', '')
+        return context
+
+
+class ProjectDetailView(LoginRequiredMixin, DetailView):
+    model = Project
+    template_name = 'tasks/project_detail.html'
+    context_object_name = 'project'
+
+    def get_queryset(self):
+        return super().get_queryset().filter(owner=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_object()
+        tasks_queryset = project.task_set.filter(owner=self.request.user)
+
+        status = self.request.GET.get('status')
+        priority = self.request.GET.get('priority')
+        search_query = self.request.GET.get('q')
+
+        if status:
+            tasks_queryset = tasks_queryset.filter(status=status)
+        if priority:
+            tasks_queryset = tasks_queryset.filter(priority=priority)
+        if search_query:
+            tasks_queryset = tasks_queryset.filter(
+                Q(title__icontains=search_query) | Q(description__icontains=search_query)
+            )
+        context['tasks'] = tasks_queryset.order_by('-created_at')
+
+        context['current_status'] = self.request.GET.get('status', '')
+        context['current_priority'] = self.request.GET.get('priority', '')
+        context['search_query'] = self.request.GET.get('q', '')
+        return context

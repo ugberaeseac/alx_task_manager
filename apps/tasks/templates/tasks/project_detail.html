@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h2>{{ project.title }}</h2>
+        <p>{{ project.description|default:"No description provided." }}</p>
+        <p>Owner: {{ project.owner.username }}</p>
+        <p>Created At: {{ project.created_at }}</p>
+        <p>Updated At: {{ project.updated_at }}</p>
+
+        <h3>Tasks for this Project:</h3>
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <form method="get" class="form-inline">
+                    <div class="form-group mr-2">
+                        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ search_query }}">
+                    </div>
+                    <div class="form-group mr-2">
+                        <select name="status" class="form-control">
+                            <option value="">All Statuses</option>
+                            {% for choice_value, choice_label in Task.STATUS_CHOICES %}
+                                <option value="{{ choice_value }}" {% if choice_value == current_status %}selected{% endif %}>{{ choice_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group mr-2">
+                        <select name="priority" class="form-control">
+                            <option value="">All Priorities</option>
+                            {% for choice_value, choice_label in Task.PRIORITY_CHOICES %}
+                                <option value="{{ choice_value }}" {% if choice_value == current_priority %}selected{% endif %}>{{ choice_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Filter & Search</button>
+                    <a href="{% url 'tasks:project_detail' project.pk %}" class="btn btn-secondary ml-2">Clear Filters</a>
+                </form>
+            </div>
+        </div>
+
+        {% if tasks %}
+            <ul class="list-group">
+                {% for task in tasks %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{% url 'tasks:task_detail' task.pk %}">{{ task.title }}</a>
+                        <span class="badge badge-info badge-pill">{{ task.get_status_display }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No tasks found for this project.</p>
+        {% endif %}
+
+        <div class="mt-3">
+            <a href="{% url 'tasks:project_list' %}" class="btn btn-secondary">Back to Projects</a>
+        </div>
+    </div>
+{% endblock %}
